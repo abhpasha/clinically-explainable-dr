@@ -26,3 +26,14 @@ def test_invalid_grade(tmp_path):
     csv=tmp_path/'FP.csv';pd.DataFrame({'image':['a.jpg'],'grade':[5]}).to_csv(csv,index=False)
     with pytest.raises(ValueError,match='grade'):
         parse_manifest(csv,tmp_path)
+
+
+def test_manifest_img_prefixed_path(tmp_path):
+    (tmp_path / "img").mkdir()
+    Image.new("RGB", (20,20)).save(tmp_path / "img" / "tr000001.jpg")
+    csv = tmp_path / "FP.csv"
+    pd.DataFrame({"image": ["img/tr000001.jpg"], "grade": [2]}).to_csv(csv, index=False)
+    for root in [tmp_path, tmp_path / "img"]:
+        result = parse_manifest(csv, root)
+        assert result.grade.tolist() == [2]
+        assert result.path.iloc[0] == str((tmp_path / "img" / "tr000001.jpg").resolve())
