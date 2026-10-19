@@ -18,6 +18,22 @@ Obtain the **MMRDR-CFP** subset and inspect its actual directory layout, `FP.csv
 
 Never commit MMRDR images, personally identifiable data, weights or assessment-restricted materials. `.gitignore` excludes local datasets and generated artifacts.
 
+## New: 19 GB dataset preparation + staged transfer learning
+
+**[Read the step-by-step Colab guide](docs/MMRDR_CFP_19GB_COLAB.md)** before downloading. The official MMRDR data are shipped in nine split archive volumes (approximately 18.6 GB total). All parts are required; extract **CFP only** with sufficient free Colab disk. The original CFP dataset may contain **one** `MMRDR-CFP/FP.csv` containing both `tr######.jpg` and `ts######.jpg` records—not necessarily separate train/test CSVs.
+
+If your extracted dataset has one `FP.csv` and one `img/` folder, run:
+
+```bash
+python -m drx.prepare --csv /content/mmrdr_data/MMRDR-CFP/FP.csv --images /content/mmrdr_data/MMRDR-CFP --output data/manifests
+python -m drx.train --config configs/resnet50_head.yaml --train-csv data/manifests/train.csv --train-images /content/mmrdr_data/MMRDR-CFP
+python -m drx.train --config configs/resnet50_partial.yaml --train-csv data/manifests/train.csv --train-images /content/mmrdr_data/MMRDR-CFP
+```
+
+Head-only is a frozen ImageNet-pretrained backbone with a trained five-grade classifier. Partial fine-tuning then loads the head-only checkpoint and trains the final residual block plus classifier. **Both use the same seeded validation partition**, with the official test held out. Optional higher-resolution stage: `configs/resnet50_partial_384.yaml`. The original `configs/resnet50.yaml` remains a full fine-tuning alternative. The JPEGs are loaded, resized, normalised and augmented **on the fly**; no 19 GB preprocessing copy is created.
+
+> The commands below under "Expected local dataset layout" show an **alternative split-folder arrangement**. Prefer the new Colab guide and inspect the actual extracted paths. No experiment results have yet been collected.
+
 ## Installation
 
 Python 3.10+; a GPU is recommended for the ResNet-50 training configuration.
