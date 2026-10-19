@@ -11,6 +11,7 @@ from tqdm.auto import tqdm
 
 from .core import build_model, device_choice, read_config, seed_all, write_json
 from .data import CFPDataset, make_split, parse_manifest
+from .finetune import set_trainable, frozen_bn_eval
 
 
 def collect(model, loader, device):
@@ -41,15 +42,24 @@ def run(args):
     val_dl=DataLoader(CFPDataset(val,c["image_size"]),shuffle=False,**dl_args)
     device=device_choice()
     model=build_model(c["model"], c["pretrained"]).to(device)
+    if c.get("init_checkpoint"):
+        from .core import load_checkpoint
+        previous = load_checkpoint(c["init_checkpoint"], device)
+        if previous["model_name"] != c["model"]:
+            raise ValueError("Checkpoint architecture does not match")
+        model.load_state_dict(previous["model_state"])
+    mode = c.get("train_mode", "full")
+    trainable = set_trainable(model, mode)
+    print(f"Training mode: {mode}; trainable parameters: {trainable:,}")
     weights=None
     if c["weighted_loss"]:
         counts=np.bincount(train.grade, minlength=5)
         weights=torch.as_tensor(len(train)/(5*np.maximum(counts,1)),dtype=torch.float32,device=device)
     criterion=torch.nn.CrossEntropyLoss(weight=weights)
-    optimizer=torch.optim.AdamW(model.parameters(),lr=c["learning_rate"],weight_decay=c["weight_decay"])
+    optimizer=torch.optim.AdamW((p for p in model.parameters() if p.requires_grad),lr=c["learning_rate"],weight_decay=c["weight_decay"])
     best=-1.0;stale=0;history=[]
     for epoch in range(1,c["epochs"]+1):
-        model.train();sum_loss=0;total=0
+        model.train();frozen_bn_eval(model);sum_loss=0;total=0
         for xb,yb,_ in tqdm(train_dl,desc=f"epoch {epoch}",leave=False):
             xb=xb.to(device);yb=yb.to(device)
             optimizer.zero_grad(set_to_none=True)
@@ -66,7 +76,7 @@ def run(args):
             stale+=1
             if stale>=c["patience"]:break
     pd.DataFrame(history).to_csv(out/"history.csv",index=False)
-    write_json(out/"run_metadata.json", {"config":c,"python":platform.python_version(),"torch":torch.__version__,"device":str(device),"best_validation_macro_f1":best,"test_evaluated":False})
+    write_json(out/"run_metadata.json", {"config":c,"python":platform.python_version(),"torch":torch.__version__,"device":str(device),"best_validation_macro_f1":best,"train_mode":mode,"trainable_parameters":trainable,"initial_checkpoint":c.get("init_checkpoint"),"test_evaluated":False})
     print(f"Best validation macro-F1: {best:.4f}. Test deliberately NOT evaluated. Saved {out/'best.pt'}")
 
 
