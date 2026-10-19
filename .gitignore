@@ -1,0 +1,22 @@
+# Data and generated output; never upload patient images or weights
+data/
+datasets/
+*.jpg
+*.jpeg
+*.png
+*.tif
+*.tiff
+*.pt
+*.pth
+*.ckpt
+outputs/*
+!outputs/.gitkeep
+!outputs/README.md
+__pycache__/
+.pytest_cache/
+*.py[cod]
+.venv/
+.env
+.DS_Store
+.ipynb_checkpoints/
+*.egg-info/
