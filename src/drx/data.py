@@ -48,10 +48,17 @@ def parse_manifest(csv_file, images_dir, filename_col=None, label_col="grade"):
         raw = Path(v)
         if raw.is_absolute() or ".." in raw.parts:
             raise ValueError("Unsafe image filename (absolute or path traversal)")
-        options = [images_dir / raw]
+        # Some MMRDR manifests use names like tr000001.jpg; others use
+        # img/tr000001.jpg. Accept either an img/ root or its parent.
+        roots = [images_dir]
+        if images_dir.name.lower() == "img":
+            roots.append(images_dir.parent)
+        else:
+            roots.append(images_dir / "img")
+        options = [root / raw for root in roots]
         if not raw.suffix:
-            options += [images_dir / (v + ext) for ext in (".jpg", ".jpeg", ".png")]
-        existing = [x.resolve() for x in options if x.is_file()]
+            options += [root / (v + ext) for root in roots for ext in (".jpg", ".jpeg", ".png")]
+        existing = list(dict.fromkeys(x.resolve() for x in options if x.is_file()))
         if len(existing) != 1:
             raise FileNotFoundError(f"Expected exactly one image for {v!r}; found {len(existing)} under {images_dir}")
         if existing[0].suffix.lower() not in IMAGE_EXTS:
