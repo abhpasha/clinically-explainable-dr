@@ -1,0 +1,1 @@
+Generated checkpoints, model outputs, plots and predictions appear here locally. Files are intentionally excluded from version control. Do not commit medical image datasets, identifiable images or pretrained model weight files.
