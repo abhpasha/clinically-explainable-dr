@@ -163,3 +163,18 @@ The extended configs have `use_amp: true`, enabling automatic mixed precision on
 Default extension sequence: 224px frozen head up to **12 epochs** (patience 4); 384px frozen head up to **8 epochs** (patience 4); 384px partial layer4+classifier up to **8 epochs** (patience 3). Those are maxima; early stopping selects the best validation epoch. The higher resolution uses the same official training subset and internal validation partition as the original experiment; it does not read official test labels for model choice. Comparing validation scores across exploratory stages is not a new blinded test. GPU availability, quota, run time and final predictive performance cannot be guaranteed.
 
 The notebook exports model checkpoints and aggregate results in ZIP archives **without original retinal images**. Lesion indicators are image-level and Grad-CAM is illustrative attribution, not spatial pathology validation. Do not publish trained weights or individual sample outputs if source-data permissions prohibit redistribution.
+
+## Completed exploratory extension: longer head and 384px (20 October 2026)
+
+A second Kaggle notebook (Git-pinned at `9d7aa84c7a2f1b3a632c53aae232f44a08e072be`) completed all three stages using one NVIDIA T4 with automatic mixed precision, the same 8,893-image official training portion and the same seeded 1,334-image internal validation split. These are **validation results only**:
+
+| Stage | Epoch selected | Validation accuracy | Validation macro-F1 | Validation QWK | Top-label ECE | Validation images undergraded |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 224px frozen ResNet50, extended | 7 | 0.684408 | 0.581130 | 0.801429 | 0.082425 | 181/1334 |
+| 384px frozen ResNet50 | 7 | 0.694153 | 0.580442 | 0.807639 | 0.084713 | 185/1334 |
+| 384px ResNet50 layer4 + head | 6 | 0.752624 | **0.676908** | **0.853092** | 0.028804 | **110/1334** |
+
+The 384px partially fine-tuned model is the validation-selected candidate. **The extended notebook did not evaluate it on the official held-out test set.** These exploratory validation results cannot establish clinical safety, patient-level generalisation or a true gain attributable purely to input resolution: compared experiments also differ in optimisation/training settings. Confidence calibration statistics are descriptive and obtained from a dataset used for model selection. If a final test evaluation is subsequently run, freeze the selected model and decision rules beforehand, report that the official test set was used previously for the historical 224px experiment, and do not tune again against test performance.
+
+Recommended clinically oriented follow-up using saved predictions (no additional GPU training): per-grade recall, true-grade-stratified undergrading, risk-versus-coverage (confidence-based review), and a clearly labelled exploratory grade>=2 threshold analysis. Clearly distinguish attribution from lesion annotations and discuss clinically consequential severe-grade misses.
+
