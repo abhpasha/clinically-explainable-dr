@@ -12,3 +12,5 @@ val_fraction: 0.15
 weighted_loss: true
 patience: 4
 output_dir: outputs/resnet50_head_224_long
+use_amp: true
+resume: true
