@@ -2,7 +2,7 @@
 
 **Ahsan Bin Hasan Pasha** · PyTorch · ResNet-50 · Grad-CAM · Reliability and clinical error analysis
 
-> **Research prototype only; not a medical device or diagnostic system.** The source code and synthetic smoke tests are implemented. Genuine MMRDR training runs, calibrated interpretations and held-out test results are **not yet completed**. No performance or clinical-safety claims should be made before running the dataset.
+> **Research prototype only; not a medical device or diagnostic system.** The 224-pixel MMRDR-CFP Kaggle experiment has now been completed. These results are a single image-level-split research experiment, not external or patient-independent clinical validation.
 
 ## Aim
 
@@ -32,7 +32,7 @@ python -m drx.train --config configs/resnet50_partial.yaml --train-csv data/mani
 
 Head-only is a frozen ImageNet-pretrained backbone with a trained five-grade classifier. Partial fine-tuning then loads the head-only checkpoint and trains the final residual block plus classifier. **Both use the same seeded validation partition**, with the official test held out. Optional higher-resolution stage: `configs/resnet50_partial_384.yaml`. The original `configs/resnet50.yaml` remains a full fine-tuning alternative. The JPEGs are loaded, resized, normalised and augmented **on the fly**; no 19 GB preprocessing copy is created.
 
-> The commands below under "Expected local dataset layout" show an **alternative split-folder arrangement**. Prefer the new Colab guide and inspect the actual extracted paths. No experiment results have yet been collected.
+> The commands below under "Expected local dataset layout" show an **alternative split-folder arrangement**. Prefer the new Colab guide and inspect the actual extracted paths. The 224-pixel experiment is complete; the 384-pixel extension is a separate validation-only experiment.
 
 ## Installation
 
@@ -136,4 +136,20 @@ MMRDR: https://doi.org/10.1038/s41597-026-07005-9 · DR grades: https://pubmed.n
 
 Original research pipeline for an assessment, developed with AI assistance. Check your institution's requirements for acknowledging such assistance.
 
-**Submission status: pipeline and tests available; actual data audit, model training, performance findings, Grad-CAM examples and final report pending.**
+**Submission status (20 October 2026):** 224-pixel data audit, frozen-head baseline (4 epochs), partial fine-tuning (6 epochs), final held-out test and illustrative Grad-CAM completed. Report remains to be finalised. Higher-resolution follow-up is planned separately.
+
+
+## Completed 224-pixel CFP experiment (20 October 2026)
+
+- Dataset: 11,118 CFP images; official training 8,893; official held-out test 2,225.
+- Stratified internal validation: 1,334 images from the official training portion, random seed 42.
+- Frozen ImageNet ResNet-50 head: four epochs; validation accuracy **0.6432**, macro-F1 **0.5211**, quadratic weighted kappa **0.7785**.
+- Partial layer4 + head: six epochs; best validation checkpoint at epoch four; validation accuracy **0.7571**, macro-F1 **0.6293**, QWK **0.8483**.
+- **One-time test evaluation of the validation-selected partial model:** accuracy **0.7299**, macro-F1 **0.5979**, QWK **0.8354** (n=2,225).
+- Test errors: **366** undergraded cases, including **97** undergraded by 2+ ordinal grades. Moderate NPDR recall **0.3594**, PDR recall **0.5821**.
+- The five-grade CFP labels and seven image-level lesion indicators are not pixel segmentation ground truth; Grad-CAM is model attribution, not verified lesion localisation.
+- Important: this completed experiment ran in a self-contained Kaggle notebook aligned with, but not identical to, the repository CLI. Any results reported from future repository-CLI experiments must be distinguished and include their own configs, histories and seed/version metadata.
+- Higher-resolution follow-up configurations: `configs/resnet50_head_224_long.yaml`, `configs/resnet50_head_384_extended.yaml` and `configs/resnet50_partial_384_extended.yaml`.
+- **No repeated testing on the official test set for tuning:** compare follow-up models on the same internal validation split; record selection before any new final held-out test evaluation. The previously inspected test performance is observational, not a fresh blind assessment.
+
+The downloadable Kaggle experiment output archive contains checkpoint weights and prediction-level data; **do not commit it to GitHub**. Publish only source, configuration, metadata and selected aggregate results/figures consistent with redistribution permissions.
