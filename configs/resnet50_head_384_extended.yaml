@@ -1,0 +1,14 @@
+seed: 42
+model: resnet50
+pretrained: true
+train_mode: head
+image_size: 384
+batch_size: 8
+num_workers: 2
+epochs: 12
+learning_rate: 0.001
+weight_decay: 0.0001
+val_fraction: 0.15
+weighted_loss: true
+patience: 4
+output_dir: outputs/resnet50_head_384_extended
