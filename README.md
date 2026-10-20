@@ -178,3 +178,11 @@ The 384px partially fine-tuned model is the validation-selected candidate. **The
 
 Recommended clinically oriented follow-up using saved predictions (no additional GPU training): per-grade recall, true-grade-stratified undergrading, risk-versus-coverage (confidence-based review), and a clearly labelled exploratory grade>=2 threshold analysis. Clearly distinguish attribution from lesion annotations and discuss clinically consequential severe-grade misses.
 
+
+## Follow-up: quantitative XAI faithfulness audit (validation only)
+
+The research notebook adds an XAI audit without retraining the selected 384px ResNet-50. Reusable source helpers are at [`src/drx/xai_checks.py`](src/drx/xai_checks.py) with synthetic tests at [`tests/test_xai_checks.py`](tests/test_xai_checks.py).
+
+Method: stratified random selection of internal-validation cases (default 10 per grade, seed 42); same frozen predicted class across perturbations; 8×8 square region grid; replace selected image regions with a heavily Gaussian-blurred version of the original; Grad-CAM vs random-region deletion probability curves, plus coarse leave-one-region-out occlusion maps. Use paired image-resampling bootstrap intervals on area-averaged confidence drops (Grad-CAM minus random) and Spearman rank correlation of Grad-CAM vs occlusion region importances. Repeat Grad-CAM after randomizing **only** the classifier layer as a *partial parameter randomization* sanity check; full cascading randomization and lesion-level tests remain future work. The selected case series is grade-balanced, hence XAI aggregate results are not prevalence weighted.
+
+No official test data are needed. Never infer that attractive attention heatmaps identify pathological lesions. Occlusion and deletion can introduce distribution shift, and the occlusion map will naturally be favored by the same perturbation metric; compare with the random baseline and report uncertainty instead of claiming a universal explanation score. References: Selvaraju et al. ICCV 2017 (Grad-CAM), Adebayo et al. NeurIPS 2018 (saliency sanity checks), Gomez et al. 2022 (limitations of deletion/insertion evaluation).
