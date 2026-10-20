@@ -13,3 +13,5 @@ val_fraction: 0.15
 weighted_loss: true
 patience: 3
 output_dir: outputs/resnet50_partial_384_extended
+use_amp: true
+resume: true
