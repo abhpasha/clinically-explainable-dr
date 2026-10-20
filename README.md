@@ -153,3 +153,13 @@ Original research pipeline for an assessment, developed with AI assistance. Chec
 - **No repeated testing on the official test set for tuning:** compare follow-up models on the same internal validation split; record selection before any new final held-out test evaluation. The previously inspected test performance is observational, not a fresh blind assessment.
 
 The downloadable Kaggle experiment output archive contains checkpoint weights and prediction-level data; **do not commit it to GitHub**. Publish only source, configuration, metadata and selected aggregate results/figures consistent with redistribution permissions.
+
+## Kaggle T4 reproducibility, mixed precision and recovery
+
+The October 2026 Kaggle extension clones a **pinned Git commit** and installs this repository in editable mode without replacing Kaggle's CUDA-enabled PyTorch. It checks runtime packages against the repository's `requirements.txt` and records package versions and configuration hashes, so the environment can be inspected rather than assumed reproducible.
+
+The extended configs have `use_amp: true`, enabling automatic mixed precision on a CUDA GPU (one T4 is used even when Kaggle offers T4 x2), and `resume: true`, saving **`last.pt` with optimizer, scaler, training history, epoch and PyTorch RNG state after each completed epoch**. The best validation checkpoint remains separate in `best.pt`. Per-epoch history and `progress.json` are updated continuously; `run_metadata.json` indicates a completed stage. Resume is supported only when the actual checkpoint files have survived or have been restored to the configured output directory. Terminating a Kaggle session can remove ephemeral `/kaggle/working` state—download intermediate archives or save notebook output versions to preserve files.
+
+Default extension sequence: 224px frozen head up to **12 epochs** (patience 4); 384px frozen head up to **8 epochs** (patience 4); 384px partial layer4+classifier up to **8 epochs** (patience 3). Those are maxima; early stopping selects the best validation epoch. The higher resolution uses the same official training subset and internal validation partition as the original experiment; it does not read official test labels for model choice. Comparing validation scores across exploratory stages is not a new blinded test. GPU availability, quota, run time and final predictive performance cannot be guaranteed.
+
+The notebook exports model checkpoints and aggregate results in ZIP archives **without original retinal images**. Lesion indicators are image-level and Grad-CAM is illustrative attribution, not spatial pathology validation. Do not publish trained weights or individual sample outputs if source-data permissions prohibit redistribution.
