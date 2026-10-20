@@ -6,7 +6,7 @@ train_mode: partial
 image_size: 384
 batch_size: 8
 num_workers: 2
-epochs: 10
+epochs: 8
 learning_rate: 0.00003
 weight_decay: 0.0001
 val_fraction: 0.15
