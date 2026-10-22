@@ -186,3 +186,15 @@ The research notebook adds an XAI audit without retraining the selected 384px Re
 Method: stratified random selection of internal-validation cases (default 10 per grade, seed 42); same frozen predicted class across perturbations; 8×8 square region grid; replace selected image regions with a heavily Gaussian-blurred version of the original; Grad-CAM vs random-region deletion probability curves, plus coarse leave-one-region-out occlusion maps. Use paired image-resampling bootstrap intervals on area-averaged confidence drops (Grad-CAM minus random) and Spearman rank correlation of Grad-CAM vs occlusion region importances. Repeat Grad-CAM after randomizing **only** the classifier layer as a *partial parameter randomization* sanity check; full cascading randomization and lesion-level tests remain future work. The selected case series is grade-balanced, hence XAI aggregate results are not prevalence weighted.
 
 No official test data are needed. Never infer that attractive attention heatmaps identify pathological lesions. Occlusion and deletion can introduce distribution shift, and the occlusion map will naturally be favored by the same perturbation metric; compare with the random baseline and report uncertainty instead of claiming a universal explanation score. References: Selvaraju et al. ICCV 2017 (Grad-CAM), Adebayo et al. NeurIPS 2018 (saliency sanity checks), Gomez et al. 2022 (limitations of deletion/insertion evaluation).
+
+
+## Completed quantitative XAI audit (22 October 2026)
+
+The validation-only faithfulness audit was run on **50 internal-validation images**, deliberately balanced at 10 per DR grade, using the selected 384px partially fine-tuned checkpoint (best epoch 6). The original predicted class was held fixed while increasingly large image regions were replaced with a Gaussian-blurred reference.
+
+- Mean integrated predicted-class confidence drop: **Grad-CAM 0.4139**, **random 0.2952**, **occlusion 0.4461**.
+- Paired Grad-CAM minus random difference: **+0.1187**, bootstrap 95% percentile CI **0.0740 to 0.1669**; Grad-CAM exceeded the random control in **44/50** images.
+- Median Grad-CAM vs occlusion region Spearman correlation: **0.2129** (weak spatial agreement).
+- Partial parameter-randomisation sanity check: after randomising only the classifier layer, median correlation between original and randomised Grad-CAM maps was **-0.1095** across 15 images.
+
+Interpretation is intentionally narrow: Grad-CAM-selected regions affected the model's original-class confidence more than random regions under this perturbation protocol, but this **does not validate lesion localisation or clinical safety**. Occlusion is advantaged by the matched perturbation metric; blurred patches introduce distribution shift; the audit sample is grade-balanced rather than prevalence-weighted; and there were no expert pixel-level lesion masks or independent patient/site data.
