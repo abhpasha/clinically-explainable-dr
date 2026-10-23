@@ -33,7 +33,14 @@ def run(args):
         overlap = set(Path(f).name for f in tr.path) & test_images
         if overlap:
             raise ValueError(f"Train/test filename collision: {len(overlap)}")
-    train, val = make_split(tr, c["val_fraction"], c["seed"])
+    if args.val_csv:
+        train = tr.reset_index(drop=True)
+        val = parse_manifest(args.val_csv, args.train_images, args.filename_col, args.label_col).reset_index(drop=True)
+        overlap = set(Path(f).name for f in train.path) & set(Path(f).name for f in val.path)
+        if overlap:
+            raise ValueError(f"Explicit train/validation filename overlap: {len(overlap)}")
+    else:
+        train, val = make_split(tr, c["val_fraction"], c["seed"])
     for name, part in (("train",train),("val",val)):
         pd.DataFrame({"filename":[Path(f).name for f in part.path],"grade":part.grade}).to_csv(out/f"{name}_split.csv",index=False)
     write_json(out/"dataset_summary.json", {"counts": {name:part.grade.value_counts().sort_index().to_dict() for name,part in (("train",train),("val",val))}, "notes":"CFP official test is image-level; patient independence cannot be guaranteed by published MMRDR split."})
@@ -60,6 +67,7 @@ def run(args):
         weights=torch.as_tensor(len(train)/(5*np.maximum(counts,1)),dtype=torch.float32,device=device)
     criterion=torch.nn.CrossEntropyLoss(weight=weights)
     optimizer=torch.optim.AdamW((p for p in model.parameters() if p.requires_grad),lr=c["learning_rate"],weight_decay=c["weight_decay"])
+    accumulation_steps=max(1,int(c.get("gradient_accumulation_steps",1)))
     amp=bool(c.get("use_amp", False)) and device.type=="cuda"
     scaler=torch.cuda.amp.GradScaler(enabled=amp)
     best=-1.0;stale=0;history=[];start_epoch=1
@@ -80,19 +88,25 @@ def run(args):
     print(f"AMP mixed precision enabled: {amp}", flush=True)
     for epoch in range(start_epoch,c["epochs"]+1):
         model.train();frozen_bn_eval(model);sum_loss=0;total=0
-        for xb,yb,_ in tqdm(train_dl,desc=f"epoch {epoch}",leave=False):
+        optimizer.zero_grad(set_to_none=True)
+        for step,(xb,yb,_) in enumerate(tqdm(train_dl,desc=f"epoch {epoch}",leave=False),1):
             xb=xb.to(device);yb=yb.to(device)
-            optimizer.zero_grad(set_to_none=True)
             with torch.autocast(device_type=device.type, enabled=amp):
-                loss=criterion(model(xb),yb)
+                raw_loss=criterion(model(xb),yb)
+                loss=raw_loss/accumulation_steps
             if amp:
                 scaler.scale(loss).backward()
-                scaler.step(optimizer)
-                scaler.update()
             else:
                 loss.backward()
-                optimizer.step()
-            sum_loss+=loss.item()*len(yb);total+=len(yb)
+            should_step=(step % accumulation_steps == 0) or (step == len(train_dl))
+            if should_step:
+                if amp:
+                    scaler.step(optimizer)
+                    scaler.update()
+                else:
+                    optimizer.step()
+                optimizer.zero_grad(set_to_none=True)
+            sum_loss+=raw_loss.item()*len(yb);total+=len(yb)
         vy,vp,_=collect(model,val_dl,device)
         macro=float(f1_score(vy,vp.argmax(axis=1),average="macro",labels=list(range(5)),zero_division=0))
         record={"epoch":epoch,"train_loss":sum_loss/max(total,1),"val_macro_f1":macro}
@@ -117,7 +131,7 @@ def run(args):
             "best_validation_macro_f1":best,"stale":stale,
             "completed":False,"amp_enabled":amp})
         if stale>=c["patience"]:break
-    write_json(out/"run_metadata.json", {"config":c,"python":platform.python_version(),"torch":torch.__version__,"device":str(device),"best_validation_macro_f1":best,"train_mode":mode,"trainable_parameters":trainable,"initial_checkpoint":c.get("init_checkpoint"),"amp_enabled":amp,"test_evaluated":False})
+    write_json(out/"run_metadata.json", {"config":c,"python":platform.python_version(),"torch":torch.__version__,"device":str(device),"best_validation_macro_f1":best,"train_mode":mode,"trainable_parameters":trainable,"initial_checkpoint":c.get("init_checkpoint"),"amp_enabled":amp,"gradient_accumulation_steps":accumulation_steps,"explicit_validation_manifest":bool(args.val_csv),"test_evaluated":False})
     write_json(out/"progress.json",{"last_completed_epoch":history[-1]["epoch"] if history else 0,
         "best_validation_macro_f1":best,"stale":stale,"completed":True,"amp_enabled":amp})
     print(f"Best validation macro-F1: {best:.4f}. Test deliberately NOT evaluated. Saved {out/'best.pt'}")
@@ -128,6 +142,7 @@ def main():
     parser.add_argument("--config",default="configs/resnet50.yaml")
     parser.add_argument("--train-csv",required=True)
     parser.add_argument("--train-images",required=True)
+    parser.add_argument("--val-csv",default=None,help="Optional fixed validation manifest. When supplied, no internal split is created.")
     parser.add_argument("--test-images",default=None)
     parser.add_argument("--filename-col",default=None)
     parser.add_argument("--label-col",default="grade")
