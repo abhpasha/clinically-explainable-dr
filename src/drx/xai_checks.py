@@ -74,7 +74,11 @@ def mean_integrated_drop(probabilities, fractions=FRACTIONS):
     f = np.asarray(fractions, dtype=float)
     if len(p) != len(f) or len(p) < 2 or f[-1] <= f[0]:
         raise ValueError("Invalid curve")
-    integrate = getattr(np, "trapezoid", np.trapz)\n    return float(integrate(p[0] - p, f) / (f[-1] - f[0]))
+    if hasattr(np, "trapezoid"):
+        area = np.trapezoid(p[0] - p, f)
+    else:
+        area = np.trapz(p[0] - p, f)
+    return float(area / (f[-1] - f[0]))
 
 
 def spearman_map_correlation(a, b):
