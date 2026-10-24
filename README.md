@@ -132,7 +132,7 @@ The final assessment additionally froze uncertainty-review thresholds on validat
 
 ## Explainability
 
-Grad-CAM is implemented locally in `src/drx/explain.py` using ResNet layer4 activations and gradients. The quantitative audit helpers in `src/drx/xai_checks.py` implement deletion curves, fundus-constrained random controls, occlusion sensitivity and parameter-randomisation checks.
+Grad-CAM is implemented locally in `src/drx/explain.py` using ResNet layer4 activations and gradients. `src/drx/xai_checks.py` implements the reusable deletion, occlusion, correlation and bootstrap utilities. The final fundus-mask restriction, repeated random rankings and cascading parameter-randomisation orchestration were run in the final Kaggle analysis notebook and are not hidden inside `xai_checks.py`.
 
 Example:
 
