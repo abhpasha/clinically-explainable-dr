@@ -1,0 +1,5 @@
+model_a,model_b,comparison,macro_f1_difference_a_minus_b,bootstrap_95_ci_low,bootstrap_95_ci_high
+C_head_384,A_head_224,resolution effect among frozen heads,0.03728284801922721,0.0037272216517685616,0.07300517847063112
+B_partial_224,A_head_224,partial fine tuning effect at 224 px,0.04502213947304767,0.009176455843222313,0.08681863194045555
+D_partial_384,C_head_384,partial fine tuning effect at 384 px,0.008685255018122784,-0.019328264655107546,0.0365778175868968
+D_partial_384,B_partial_224,resolution effect among partial models,0.0009459635643023212,-0.032709193262387116,0.03438216079101063
