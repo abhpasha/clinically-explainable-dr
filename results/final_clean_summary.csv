@@ -1,0 +1,10 @@
+metric,validation,test
+accuracy,0.754545,0.745618
+macro_f1,0.625535,0.602238
+qwk,0.850673,0.830468
+ece,0.0346,0.0339
+
+Notes:
+- Primary model: ResNet-50, 384 px, layer4 + classifier fine-tuning, seed 42.
+- Official test is follow-up/non-blind; no post-test tuning.
+- Clean pool: 8,797; development 7,477; validation 1,320; official test 2,225.
