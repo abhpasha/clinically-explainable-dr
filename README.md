@@ -1,5 +1,7 @@
 # Clinically Explainable AI for Diabetic Retinopathy Grading
 
+> **Submission map:** Primary reported results come from experiment commit `0713e20bb81741163ffea2ee39a5be3dbb870b86`. Later commits add the cleaned notebook, evidence CSV/JSON exports, reproducibility scripts and documentation; they do not change the reported seed-42 model or official-test predictions.
+
 **Ahsan Bin Hasan Pasha** · PyTorch · ResNet-50 · Grad-CAM · reliability and clinical error analysis
 
 > **Research prototype only. Not a medical device or autonomous diagnostic system.**
