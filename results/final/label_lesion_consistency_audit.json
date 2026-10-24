@@ -1,0 +1,9 @@
+{
+  "development_plus_validation_n": 8797,
+  "grade0_with_any_recorded_lesion": 0,
+  "grade1_without_microaneurysm": 0,
+  "grade1_with_any_non_microaneurysm_lesion": 421,
+  "pdr_without_nv_vh_or_rd_image_level_flag": 0,
+  "non_pdr_with_nv_vh_or_rd_image_level_flag": 0,
+  "interpretation": "Descriptive label-concept consistency audit only; lesion indicators are image-level concepts, not spatial masks."
+}
