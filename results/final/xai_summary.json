@@ -1,0 +1,16 @@
+{
+  "n_grade_balanced_images": 50,
+  "mean_integrated_drop_gradcam": 0.3041470084844059,
+  "mean_integrated_drop_fundus_random": 0.24626635205072891,
+  "paired_gradcam_minus_fundus_random": {
+    "n": 50,
+    "mean_difference": 0.057880656433677,
+    "bootstrap_95_percentile_CI": [0.03582398906235163, 0.0825871187504376]
+  },
+  "gradcam_beats_fundus_random_n": 41,
+  "median_gradcam_occlusion_spearman": 0.19319550034991106,
+  "median_gradcam_outside_fundus_mass_fraction": 0.07580704561143203,
+  "median_fc_only_randomized_gradcam_spearman": -0.14524842330483304,
+  "median_layer4_plus_fc_randomized_gradcam_spearman": 0.07954272983870955,
+  "note": "Fundus-constrained random selection was implemented in the final submission notebook using xai_checks.py perturbation primitives."
+}
