@@ -187,6 +187,7 @@ Exact package versions are captured in the final experiment evidence package. GP
 | `src/drx/explain.py` | custom ResNet Grad-CAM |
 | `src/drx/xai_checks.py` | quantitative XAI faithfulness helpers |
 | `configs/final_*_clean.yaml` | final four model configurations |
+| `scripts/final_report_analysis.py` | reproduce report-level CIs, clinical errors, calibration and Mild NPDR pattern analysis from generated predictions |
 | `tests/` | synthetic unit and smoke tests |
 
 ## Limitations
