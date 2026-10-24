@@ -190,6 +190,10 @@ Exact package versions are captured in the final experiment evidence package. GP
 | `scripts/final_report_analysis.py` | reproduce report-level CIs, clinical errors, calibration and Mild NPDR pattern analysis from generated predictions |
 | `tests/` | synthetic unit and smoke tests |
 
+## Report evidence tables
+
+Small, non-restricted aggregate outputs used in the final report are committed under `results/final/`, including the controlled validation comparison, paired bootstrap differences, frozen test review-policy performance, within-PDR lesion-probe comparison and post-hoc seed sensitivity. These files are post-run evidence only; they do not change the experiment commit or permit test-set tuning.
+
 ## Limitations
 
 The final primary comparison uses one training seed; validation is used for both epoch and model selection; hyperparameters were informed by earlier exploratory work on the same official training pool; the official test is not historically blind; patient-level independence is unavailable; and the explanation methods do not establish lesion localisation or clinical safety.
