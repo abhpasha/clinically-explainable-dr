@@ -1,200 +1,201 @@
 # Clinically Explainable AI for Diabetic Retinopathy Grading
 
-**Ahsan Bin Hasan Pasha** · PyTorch · ResNet-50 · Grad-CAM · Reliability and clinical error analysis
+**Ahsan Bin Hasan Pasha** · PyTorch · ResNet-50 · Grad-CAM · reliability and clinical error analysis
 
-> **Research prototype only; not a medical device or diagnostic system.** The 224-pixel MMRDR-CFP Kaggle experiment has now been completed. These results are a single image-level-split research experiment, not external or patient-independent clinical validation.
+> **Research prototype only. Not a medical device or autonomous diagnostic system.**
 
-## Aim
+This repository contains the code and configuration used for the final Aston University × Boots Opticians KTP practical assessment on five-class diabetic retinopathy (DR) grading from MMRDR colour fundus photographs (CFP).
 
-Predict diabetic retinopathy (DR) severity from MMRDR colour fundus photographs (CFP) with five grades: **0** no DR, **1** mild non-proliferative DR (NPDR), **2** moderate NPDR, **3** severe NPDR and **4** proliferative DR (PDR). Evaluate per-class performance, clinically significant **under-grading**, model confidence and Grad-CAM visual explanations.
+## Final experiment
 
-## Dataset access and critical caveat
+The final protocol uses the MMRDR CFP subset (11,118 images: 8,893 official training and 2,225 official test images).
 
-- Dataset paper: https://www.nature.com/articles/s41597-026-07005-9
-- Download: https://figshare.com/articles/dataset/MMRDR/29423747
-- Authors' evaluation code: https://github.com/Vladimirovich2019/MMRDR_Evaluation
+Before model fitting, decoded RGB pixel hashes are used to:
+- remove 62 same-label exact duplicate training images;
+- exclude 34 official-training images that exactly match official-test pixels;
+- verify no exact-pixel overlap between the final development, validation and official-test partitions.
 
-Obtain the **MMRDR-CFP** subset and inspect its actual directory layout, `FP.csv` filenames and grade column. Official CFP train/test partitions are described as **image-level**, not confirmed patient-independent: filename and path checks cannot establish patient independence. Keep all test labels unavailable during model choice and only evaluate the official test set after freezing the trained model.
+The resulting clean training pool contains **8,797** images and is split once with seed 42 into:
+- development: **7,477**
+- validation: **1,320**
+- official test: **2,225** (kept outside model selection)
 
-Never commit MMRDR images, personally identifiable data, weights or assessment-restricted materials. `.gitignore` excludes local datasets and generated artifacts.
+CFP does not provide patient identifiers, so patient-level independence cannot be established.
 
-## New: 19 GB dataset preparation + staged transfer learning
+## Model comparison
 
-**[Read the step-by-step Colab guide](docs/MMRDR_CFP_19GB_COLAB.md)** before downloading. The official MMRDR data are shipped in nine split archive volumes (approximately 18.6 GB total). All parts are required; extract **CFP only** with sufficient free Colab disk. The original CFP dataset may contain **one** `MMRDR-CFP/FP.csv` containing both `tr######.jpg` and `ts######.jpg` records—not necessarily separate train/test CSVs.
+Four ImageNet-pretrained ResNet-50 transfer-learning configurations are evaluated on the same clean split:
 
-If your extracted dataset has one `FP.csv` and one `img/` folder, run:
+| Model | Resolution | Training |
+| --- | ---: | --- |
+| A | 224 px | classifier head only |
+| B | 224 px | layer4 + classifier |
+| C | 384 px | classifier head only |
+| D | 384 px | layer4 + classifier |
 
-```bash
-python -m drx.prepare --csv /content/mmrdr_data/MMRDR-CFP/FP.csv --images /content/mmrdr_data/MMRDR-CFP --output data/manifests
-python -m drx.train --config configs/resnet50_head.yaml --train-csv data/manifests/train.csv --train-images /content/mmrdr_data/MMRDR-CFP
-python -m drx.train --config configs/resnet50_partial.yaml --train-csv data/manifests/train.csv --train-images /content/mmrdr_data/MMRDR-CFP
-```
+Validation macro-F1 is the primary selection metric; QWK and fewer undergrades are predefined tie-breakers. The selected primary model is **D: 384 px partial fine-tuning**.
 
-Head-only is a frozen ImageNet-pretrained backbone with a trained five-grade classifier. Partial fine-tuning then loads the head-only checkpoint and trains the final residual block plus classifier. **Both use the same seeded validation partition**, with the official test held out. Optional higher-resolution stage: `configs/resnet50_partial_384.yaml`. The original `configs/resnet50.yaml` remains a full fine-tuning alternative. The JPEGs are loaded, resized, normalised and augmented **on the fly**; no 19 GB preprocessing copy is created.
+Final seed-42 validation: accuracy **0.755**, macro-F1 **0.626**, QWK **0.851**, ECE **0.035**.
 
-> The commands below under "Expected local dataset layout" show an **alternative split-folder arrangement**. Prefer the new Colab guide and inspect the actual extracted paths. The 224-pixel experiment is complete; the 384-pixel extension is a separate validation-only experiment.
+Qualified follow-up official test: accuracy **0.746**, macro-F1 **0.602**, QWK **0.830**. This test is explicitly **non-blind** because an earlier exploratory model had previously been evaluated on the same official test partition. No model, threshold or XAI setting was changed after final validation selection.
 
 ## Installation
 
-Python 3.10+; a GPU is recommended for the ResNet-50 training configuration.
+Python 3.10+ and a CUDA GPU are recommended.
 
-~~~bash
+```bash
 python -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 python -m pip install -e .
 pytest -q
-~~~
+```
 
-For GPU installs, select compatible torch/torchvision packages from https://pytorch.org/get-started/locally/. Pretrained ImageNet weights download on the first run; offline operation requires cached weights.
+## Dataset
 
-## Expected local dataset layout
+Dataset paper: https://doi.org/10.1038/s41597-026-07005-9
 
-~~~text
-data/MMRDR-CFP/
-  train/FP.csv
-  train/img/tr000001.jpg
-  test/FP.csv
-  test/img/ts000001.jpg
-~~~
+Obtain MMRDR-CFP separately. Do **not** commit the dataset to this repository.
 
-Replace example folders and filename column with **actual** dataset values. If `FP.csv` contains `filename` rather than `image`, change `--filename-col`. Code refuses ambiguous CSV columns and missing/unresolvable images rather than guessing.
+Expected extracted layout:
 
-## 1. Inspect counts and overlap
+```text
+MMRDR-CFP/
+  FP.csv
+  img/
+    tr000001.jpg
+    ...
+    ts000001.jpg
+```
 
-~~~bash
-python -m drx.inspect \
-  --train-csv data/MMRDR-CFP/train/FP.csv --train-images data/MMRDR-CFP/train/img \
-  --test-csv data/MMRDR-CFP/test/FP.csv --test-images data/MMRDR-CFP/test/img \
-  --filename-col image --label-col grade
-~~~
+## Reproduce the final clean split
 
-This checks counts and exact path/filename collisions; it does **not** check patient identities or near-duplicate photos.
+```bash
+python -m drx.clean_split \
+  --csv /path/to/MMRDR-CFP/FP.csv \
+  --images /path/to/MMRDR-CFP \
+  --output data/final_clean \
+  --seed 42 \
+  --val-fraction 0.15
+```
 
-## 2. Train: official training set only
+This writes:
+- `development.csv`
+- `validation.csv`
+- `official_test.csv`
+- exact-pixel hash audit tables
+- `clean_split_summary.json`
 
-~~~bash
-python -m drx.train \
-  --config configs/resnet50.yaml \
-  --train-csv data/MMRDR-CFP/train/FP.csv --train-images data/MMRDR-CFP/train/img \
-  --test-images data/MMRDR-CFP/test/img \
-  --filename-col image --label-col grade
-~~~
+## Train the four final configurations
 
-The seeded, stratified training/validation split is made **inside the official training set**. The model is selected by validation macro-F1 with early stopping. Configured ResNet-50 uses ImageNet initialization, 384px inputs, training-only augmentation, weighted cross entropy, AdamW and eight epochs. The official test CSV is not read during training. Best checkpoint: `outputs/resnet50/best.pt`.
+All stages use the **same fixed manifests**.
 
-For a CPU-only **software smoke test**, use `--config configs/quick_cpu.yaml`; this is not a substitute for actual full-scale evaluation.
+```bash
+python -m drx.train --config configs/final_head_224_clean.yaml \
+  --train-csv data/final_clean/development.csv \
+  --val-csv data/final_clean/validation.csv \
+  --train-images /path/to/MMRDR-CFP --filename-col image --label-col grade
 
-## 3. Held-out test evaluation (once model selection is frozen)
+python -m drx.train --config configs/final_partial_224_clean.yaml \
+  --train-csv data/final_clean/development.csv \
+  --val-csv data/final_clean/validation.csv \
+  --train-images /path/to/MMRDR-CFP --filename-col image --label-col grade
 
-~~~bash
+python -m drx.train --config configs/final_head_384_clean.yaml \
+  --train-csv data/final_clean/development.csv \
+  --val-csv data/final_clean/validation.csv \
+  --train-images /path/to/MMRDR-CFP --filename-col image --label-col grade
+
+python -m drx.train --config configs/final_partial_384_clean.yaml \
+  --train-csv data/final_clean/development.csv \
+  --val-csv data/final_clean/validation.csv \
+  --train-images /path/to/MMRDR-CFP --filename-col image --label-col grade
+```
+
+The 384 px stages use physical batch size 8 with gradient accumulation 2; effective batch size is 16 across all four configurations. BatchNorm layers remain in evaluation mode during transfer-learning stages. Partial models receive the frozen-head stage plus the partial stage, so comparisons also reflect additional optimisation.
+
+## Evaluate a frozen checkpoint
+
+Only evaluate the official test after model selection is frozen.
+
+```bash
 python -m drx.evaluate \
-  --checkpoint outputs/resnet50/best.pt \
-  --test-csv data/MMRDR-CFP/test/FP.csv --test-images data/MMRDR-CFP/test/img \
+  --checkpoint outputs/final_partial_384_clean/best.pt \
+  --test-csv data/final_clean/official_test.csv \
+  --test-images /path/to/MMRDR-CFP \
   --filename-col image --label-col grade \
-  --output-dir outputs/test
-~~~
+  --output-dir outputs/final_test
+```
 
-Outputs: `metrics.json`, `predictions.csv`, confusion matrix CSV and PNG, reliability plot. Report: accuracy, macro-F1, grade 0–4 precision/recall/F1, quadratic-weighted Cohen kappa, grade underestimation (including differences of 2+), top-label expected calibration error and multiclass Brier score. Calibration scores are descriptive and do not demonstrate safety.
+The final assessment additionally froze uncertainty-review thresholds on validation before applying them unchanged to the official test.
 
-## 4. Explain genuine examples using Grad-CAM
+## Explainability
 
-~~~bash
+Grad-CAM is implemented locally in `src/drx/explain.py` using ResNet layer4 activations and gradients. The quantitative audit helpers in `src/drx/xai_checks.py` implement deletion curves, fundus-constrained random controls, occlusion sensitivity and parameter-randomisation checks.
+
+Example:
+
+```bash
 python -m drx.explain \
-  --checkpoint outputs/resnet50/best.pt \
-  --image data/MMRDR-CFP/test/img/REAL_IMAGE.jpg \
-  --output outputs/test/example_gradcam.png
-~~~
+  --checkpoint outputs/final_partial_384_clean/best.pt \
+  --image /path/to/MMRDR-CFP/img/REAL_IMAGE.jpg \
+  --output outputs/example_gradcam.png
+```
 
-Generate 4–8 examples from real predictions, including correct grades, confident errors and severe under-grades if present. The overlay shows class-relevant activation, **not validated lesion segmentation or a clinician's reasoning**. The seven provided lesion indicators, where present, are image-level annotations, not pixel masks.
+Grad-CAM is model attribution, **not lesion segmentation or proof of clinical correctness**.
+
+## Final result summary
+
+| Split | Accuracy | Macro-F1 | QWK |
+| --- | ---: | ---: | ---: |
+| Clean validation | 0.755 | 0.626 | 0.851 |
+| Follow-up official test | 0.746 | 0.602 | 0.830 |
+
+Test-set clinical error highlights:
+- 306 undergrades;
+- 91 undergraded by two or more grades;
+- 37/134 PDR cases undergraded;
+- exploratory grade ≥2 sensitivity 0.760 (95% CI 0.726–0.792);
+- 171/902 DR images predicted as No DR;
+- 102/1,323 No-DR images upgraded.
+
+At approximately 30–33% review burden, validation-frozen uncertainty policies captured about 59–62% of PDR undergrades on the official test, leaving 14–15 of 37 PDR undergrades outside review.
+
+## Resources and reproducibility
+
+- Model: torchvision ResNet-50 with `IMAGENET1K_V2` pretrained weights.
+- Framework: PyTorch / torchvision.
+- Metrics and statistical analysis: scikit-learn, SciPy, NumPy and pandas.
+- Grad-CAM: repository implementation in `src/drx/explain.py`, based on the method of Selvaraju et al. (2017).
+- XAI sanity checks: repository implementation informed by Adebayo et al. (2018).
+- Configuration files: `configs/final_*_clean.yaml`.
+- Seed: 42 for the primary protocol; seeds 7 and 123 are post-hoc sensitivity runs only.
+
+Exact package versions are captured in the final experiment evidence package. GPU runs can still vary slightly across hardware/library versions.
 
 ## Code layout
 
 | Path | Purpose |
 | --- | --- |
-| `src/drx/data.py` | Manifest parsing, five-class grade checks, augmentations, overlap detection |
-| `src/drx/core.py` | Model, seeding and configuration |
-| `src/drx/inspect.py` | File-level data audit |
-| `src/drx/train.py` | Training and training-only validation |
-| `src/drx/evaluate.py` | Held-out test predictions |
-| `src/drx/metrics.py` | Performance, confusion matrix, error severity, reliability |
-| `src/drx/explain.py` | ResNet Grad-CAM overlays |
-| `configs/` | Full model and lightweight CPU configurations |
-| `tests/` | Synthetic unit and integration smoke tests |
-| `report/REPORT_TEMPLATE.md` | 2,000-word assessment report outline |
+| `src/drx/clean_split.py` | decoded-pixel duplicate handling and fixed split creation |
+| `src/drx/data.py` | manifest parsing and transforms |
+| `src/drx/core.py` | model construction, seeding, configuration |
+| `src/drx/train.py` | fixed-manifest training, AMP, accumulation, resume |
+| `src/drx/evaluate.py` | frozen-checkpoint evaluation |
+| `src/drx/metrics.py` | performance, undergrading and calibration |
+| `src/drx/explain.py` | custom ResNet Grad-CAM |
+| `src/drx/xai_checks.py` | quantitative XAI faithfulness helpers |
+| `configs/final_*_clean.yaml` | final four model configurations |
+| `tests/` | synthetic unit and smoke tests |
 
-## Reproducibility and limits
+## Limitations
 
-Seed 42, configuration-controlled training, saved train/validation manifests, checkpoint and run metadata, explicit test-only evaluation. Reproducing exact numbers requires the actual MMRDR data, model weights, dependencies and compute. Seeded runs can still differ across devices/libraries.
+The final primary comparison uses one training seed; validation is used for both epoch and model selection; hyperparameters were informed by earlier exploratory work on the same official training pool; the official test is not historically blind; patient-level independence is unavailable; and the explanation methods do not establish lesion localisation or clinical safety.
 
-Published MMRDR CFP patient identifiers may not be available: no claim of patient-independent evaluation. No external hospital validation, clinical review, image-quality or deployment evaluation has been performed. Models may emphasise imaging artifacts. Interpret any high confidence and Grad-CAM heatmap cautiously.
+## References
 
-## Citations
-
-MMRDR: https://doi.org/10.1038/s41597-026-07005-9 · DR grades: https://pubmed.ncbi.nlm.nih.gov/13129861/ · ResNet: https://arxiv.org/abs/1512.03385 · Grad-CAM: https://doi.org/10.1109/ICCV.2017.74 · Saliency checks: https://proceedings.neurips.cc/paper/2018/hash/294a8ed24b1ad22ec2e7efea049b8737-Abstract.html
-
-Original research pipeline for an assessment, developed with AI assistance. Check your institution's requirements for acknowledging such assistance.
-
-**Submission status (20 October 2026):** 224-pixel data audit, frozen-head baseline (4 epochs), partial fine-tuning (6 epochs), final held-out test and illustrative Grad-CAM completed. Report remains to be finalised. Higher-resolution follow-up is planned separately.
-
-
-## Completed 224-pixel CFP experiment (20 October 2026)
-
-- Dataset: 11,118 CFP images; official training 8,893; official held-out test 2,225.
-- Stratified internal validation: 1,334 images from the official training portion, random seed 42.
-- Frozen ImageNet ResNet-50 head: four epochs; validation accuracy **0.6432**, macro-F1 **0.5211**, quadratic weighted kappa **0.7785**.
-- Partial layer4 + head: six epochs; best validation checkpoint at epoch four; validation accuracy **0.7571**, macro-F1 **0.6293**, QWK **0.8483**.
-- **One-time test evaluation of the validation-selected partial model:** accuracy **0.7299**, macro-F1 **0.5979**, QWK **0.8354** (n=2,225).
-- Test errors: **366** undergraded cases, including **97** undergraded by 2+ ordinal grades. Moderate NPDR recall **0.3594**, PDR recall **0.5821**.
-- The five-grade CFP labels and seven image-level lesion indicators are not pixel segmentation ground truth; Grad-CAM is model attribution, not verified lesion localisation.
-- Important: this completed experiment ran in a self-contained Kaggle notebook aligned with, but not identical to, the repository CLI. Any results reported from future repository-CLI experiments must be distinguished and include their own configs, histories and seed/version metadata.
-- Higher-resolution follow-up configurations: `configs/resnet50_head_224_long.yaml`, `configs/resnet50_head_384_extended.yaml` and `configs/resnet50_partial_384_extended.yaml`.
-- **No repeated testing on the official test set for tuning:** compare follow-up models on the same internal validation split; record selection before any new final held-out test evaluation. The previously inspected test performance is observational, not a fresh blind assessment.
-
-The downloadable Kaggle experiment output archive contains checkpoint weights and prediction-level data; **do not commit it to GitHub**. Publish only source, configuration, metadata and selected aggregate results/figures consistent with redistribution permissions.
-
-## Kaggle T4 reproducibility, mixed precision and recovery
-
-The October 2026 Kaggle extension clones a **pinned Git commit** and installs this repository in editable mode without replacing Kaggle's CUDA-enabled PyTorch. It checks runtime packages against the repository's `requirements.txt` and records package versions and configuration hashes, so the environment can be inspected rather than assumed reproducible.
-
-The extended configs have `use_amp: true`, enabling automatic mixed precision on a CUDA GPU (one T4 is used even when Kaggle offers T4 x2), and `resume: true`, saving **`last.pt` with optimizer, scaler, training history, epoch and PyTorch RNG state after each completed epoch**. The best validation checkpoint remains separate in `best.pt`. Per-epoch history and `progress.json` are updated continuously; `run_metadata.json` indicates a completed stage. Resume is supported only when the actual checkpoint files have survived or have been restored to the configured output directory. Terminating a Kaggle session can remove ephemeral `/kaggle/working` state—download intermediate archives or save notebook output versions to preserve files.
-
-Default extension sequence: 224px frozen head up to **12 epochs** (patience 4); 384px frozen head up to **8 epochs** (patience 4); 384px partial layer4+classifier up to **8 epochs** (patience 3). Those are maxima; early stopping selects the best validation epoch. The higher resolution uses the same official training subset and internal validation partition as the original experiment; it does not read official test labels for model choice. Comparing validation scores across exploratory stages is not a new blinded test. GPU availability, quota, run time and final predictive performance cannot be guaranteed.
-
-The notebook exports model checkpoints and aggregate results in ZIP archives **without original retinal images**. Lesion indicators are image-level and Grad-CAM is illustrative attribution, not spatial pathology validation. Do not publish trained weights or individual sample outputs if source-data permissions prohibit redistribution.
-
-## Completed exploratory extension: longer head and 384px (20 October 2026)
-
-A second Kaggle notebook (Git-pinned at `9d7aa84c7a2f1b3a632c53aae232f44a08e072be`) completed all three stages using one NVIDIA T4 with automatic mixed precision, the same 8,893-image official training portion and the same seeded 1,334-image internal validation split. These are **validation results only**:
-
-| Stage | Epoch selected | Validation accuracy | Validation macro-F1 | Validation QWK | Top-label ECE | Validation images undergraded |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| 224px frozen ResNet50, extended | 7 | 0.684408 | 0.581130 | 0.801429 | 0.082425 | 181/1334 |
-| 384px frozen ResNet50 | 7 | 0.694153 | 0.580442 | 0.807639 | 0.084713 | 185/1334 |
-| 384px ResNet50 layer4 + head | 6 | 0.752624 | **0.676908** | **0.853092** | 0.028804 | **110/1334** |
-
-The 384px partially fine-tuned model is the validation-selected candidate. **The extended notebook did not evaluate it on the official held-out test set.** These exploratory validation results cannot establish clinical safety, patient-level generalisation or a true gain attributable purely to input resolution: compared experiments also differ in optimisation/training settings. Confidence calibration statistics are descriptive and obtained from a dataset used for model selection. If a final test evaluation is subsequently run, freeze the selected model and decision rules beforehand, report that the official test set was used previously for the historical 224px experiment, and do not tune again against test performance.
-
-Recommended clinically oriented follow-up using saved predictions (no additional GPU training): per-grade recall, true-grade-stratified undergrading, risk-versus-coverage (confidence-based review), and a clearly labelled exploratory grade>=2 threshold analysis. Clearly distinguish attribution from lesion annotations and discuss clinically consequential severe-grade misses.
-
-
-## Follow-up: quantitative XAI faithfulness audit (validation only)
-
-The research notebook adds an XAI audit without retraining the selected 384px ResNet-50. Reusable source helpers are at [`src/drx/xai_checks.py`](src/drx/xai_checks.py) with synthetic tests at [`tests/test_xai_checks.py`](tests/test_xai_checks.py).
-
-Method: stratified random selection of internal-validation cases (default 10 per grade, seed 42); same frozen predicted class across perturbations; 8×8 square region grid; replace selected image regions with a heavily Gaussian-blurred version of the original; Grad-CAM vs random-region deletion probability curves, plus coarse leave-one-region-out occlusion maps. Use paired image-resampling bootstrap intervals on area-averaged confidence drops (Grad-CAM minus random) and Spearman rank correlation of Grad-CAM vs occlusion region importances. Repeat Grad-CAM after randomizing **only** the classifier layer as a *partial parameter randomization* sanity check; full cascading randomization and lesion-level tests remain future work. The selected case series is grade-balanced, hence XAI aggregate results are not prevalence weighted.
-
-No official test data are needed. Never infer that attractive attention heatmaps identify pathological lesions. Occlusion and deletion can introduce distribution shift, and the occlusion map will naturally be favored by the same perturbation metric; compare with the random baseline and report uncertainty instead of claiming a universal explanation score. References: Selvaraju et al. ICCV 2017 (Grad-CAM), Adebayo et al. NeurIPS 2018 (saliency sanity checks), Gomez et al. 2022 (limitations of deletion/insertion evaluation).
-
-
-## Completed quantitative XAI audit (22 October 2026)
-
-The validation-only faithfulness audit was run on **50 internal-validation images**, deliberately balanced at 10 per DR grade, using the selected 384px partially fine-tuned checkpoint (best epoch 6). The original predicted class was held fixed while increasingly large image regions were replaced with a Gaussian-blurred reference.
-
-- Mean integrated predicted-class confidence drop: **Grad-CAM 0.4139**, **random 0.2952**, **occlusion 0.4461**.
-- Paired Grad-CAM minus random difference: **+0.1187**, bootstrap 95% percentile CI **0.0740 to 0.1669**; Grad-CAM exceeded the random control in **44/50** images.
-- Median Grad-CAM vs occlusion region Spearman correlation: **0.2129** (weak spatial agreement).
-- Partial parameter-randomisation sanity check: after randomising only the classifier layer, median correlation between original and randomised Grad-CAM maps was **-0.1095** across 15 images.
-
-Interpretation is intentionally narrow: Grad-CAM-selected regions affected the model's original-class confidence more than random regions under this perturbation protocol, but this **does not validate lesion localisation or clinical safety**. Occlusion is advantaged by the matched perturbation metric; blurred patches introduce distribution shift; the audit sample is grade-balanced rather than prevalence-weighted; and there were no expert pixel-level lesion masks or independent patient/site data.
+- Tang et al. (2026), MMRDR: https://doi.org/10.1038/s41597-026-07005-9
+- He et al. (2016), ResNet: https://doi.org/10.1109/CVPR.2016.90
+- Selvaraju et al. (2017), Grad-CAM: https://doi.org/10.1109/ICCV.2017.74
+- Adebayo et al. (2018), saliency sanity checks: https://proceedings.neurips.cc/paper/2018/hash/294a8ed24b1ad22ec2e7efea049b8737-Abstract.html
