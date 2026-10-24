@@ -74,3 +74,18 @@ def prepare(csv,images,output,val_fraction=.15,seed=42):
              "validation":int(len(val)),"seed":seed,"val_fraction":val_fraction}
     (out/"clean_split_summary.json").write_text(json.dumps(summary,indent=2)+"\n")
     return summary
+
+
+def main():
+    import argparse
+    p=argparse.ArgumentParser(description="Create leakage-controlled MMRDR-CFP development/validation/test manifests.")
+    p.add_argument("--csv",required=True,help="Path to MMRDR-CFP FP.csv")
+    p.add_argument("--images",required=True,help="Path to MMRDR-CFP directory or img/ directory")
+    p.add_argument("--output",required=True,help="Output directory for manifests and hash audit")
+    p.add_argument("--val-fraction",type=float,default=0.15)
+    p.add_argument("--seed",type=int,default=42)
+    a=p.parse_args()
+    print(json.dumps(prepare(a.csv,a.images,a.output,a.val_fraction,a.seed),indent=2))
+
+if __name__=="__main__":
+    main()
