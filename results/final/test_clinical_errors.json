@@ -1,0 +1,17 @@
+{
+  "n": 2225,
+  "errors": 566,
+  "undergraded": 306,
+  "undergraded_by_2plus": 91,
+  "severe_npdr_undergraded": 23,
+  "pdr_undergraded": 37,
+  "dr_grade1plus_predicted_no_dr": 171,
+  "normal_upgraded": 102,
+  "high_confidence_095_total": 347,
+  "high_confidence_095_errors": 3,
+  "high_confidence_error_severity": [
+    "Moderate NPDR -> Severe NPDR",
+    "PDR -> Severe NPDR",
+    "Moderate NPDR -> Severe NPDR"
+  ]
+}
