@@ -187,6 +187,7 @@ Exact package versions are captured in the final experiment evidence package. GP
 | `src/drx/explain.py` | custom ResNet Grad-CAM |
 | `src/drx/xai_checks.py` | quantitative XAI faithfulness helpers |
 | `configs/final_*_clean.yaml` | final four model configurations |
+| `notebooks/final_clean_experiment_submission.ipynb` | cleaned, output-stripped end-to-end Kaggle orchestration for the final experiment and report analyses |
 | `scripts/final_report_analysis.py` | reproduce report-level CIs, clinical errors, calibration and Mild NPDR pattern analysis from generated predictions |
 | `tests/` | synthetic unit and smoke tests |
 
@@ -204,3 +205,12 @@ The final primary comparison uses one training seed; validation is used for both
 - He et al. (2016), ResNet: https://doi.org/10.1109/CVPR.2016.90
 - Selvaraju et al. (2017), Grad-CAM: https://doi.org/10.1109/ICCV.2017.74
 - Adebayo et al. (2018), saliency sanity checks: https://proceedings.neurips.cc/paper/2018/hash/294a8ed24b1ad22ec2e7efea049b8737-Abstract.html
+
+
+## Final evidence exports
+
+Small aggregate outputs used by the report are committed under `results/final/`, including the controlled model comparison, review-policy results, lesion-conditioned undergrading, label/lesion consistency audit, XAI summary and parameter-randomisation sanity checks, within-PDR lesion probe, extra-seed sensitivity and test clinical-error summary.
+
+The cleaned notebook is committed with outputs stripped. The **primary experimental code remains pinned to commit `0713e20bb81741163ffea2ee39a5be3dbb870b86`**; subsequent commits add documentation, reproducibility wrappers and small exported results without changing the reported seed-42 model or test predictions.
+
+Only `configs/final_*_clean.yaml` belong to the final protocol. Other configuration files and Colab notes are retained solely as exploratory development history and should not be used to reproduce the submitted results.
