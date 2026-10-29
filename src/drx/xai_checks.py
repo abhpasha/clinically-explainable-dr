@@ -1,6 +1,6 @@
 """Validation-only XAI faithfulness utilities; never infer lesion localisation.
 
-Use with \`drx.explain.gradcam\` for a fixed original predicted target class.
+Use with `drx.explain.gradcam` for a fixed original predicted target class.
 All deletion/occlusion comparisons must use the same image blur reference.
 """
 import numpy as np
