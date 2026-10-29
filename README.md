@@ -174,7 +174,7 @@ At approximately 30–33% review burden, validation-frozen uncertainty policies 
 - Configuration files: `configs/final_*_clean.yaml`.
 - Seed: 42 for the primary protocol; seeds 7 and 123 are post-hoc sensitivity runs only.
 
-Exact package versions are captured in the final experiment evidence package. GPU runs can still vary slightly across hardware/library versions.
+Portable dependency ranges are in `requirements.txt`; exact core package versions recorded from the final Kaggle run are in `requirements-lock.txt`. GPU runs can still vary slightly across hardware and library builds.
 
 ## Code layout
 
@@ -189,13 +189,10 @@ Exact package versions are captured in the final experiment evidence package. GP
 | `src/drx/explain.py` | custom ResNet Grad-CAM |
 | `src/drx/xai_checks.py` | quantitative XAI faithfulness helpers |
 | `configs/final_*_clean.yaml` | final four model configurations |
+| `requirements-lock.txt` | exact core package versions recorded from the final Kaggle run |
 | `notebooks/final_clean_experiment_submission.ipynb` | cleaned, output-stripped end-to-end Kaggle orchestration for the final experiment and report analyses |
 | `scripts/final_report_analysis.py` | reproduce report-level CIs, clinical errors, calibration and Mild NPDR pattern analysis from generated predictions |
 | `tests/` | synthetic unit and smoke tests |
-
-## Report evidence tables
-
-Small, non-restricted aggregate outputs used in the final report are committed under `results/final/`, including the controlled validation comparison, paired bootstrap differences, frozen test review-policy performance, within-PDR lesion-probe comparison and post-hoc seed sensitivity. These files are post-run evidence only; they do not change the experiment commit or permit test-set tuning.
 
 ## Limitations
 
@@ -211,7 +208,7 @@ The final primary comparison uses one training seed; validation is used for both
 
 ## Final evidence exports
 
-Small aggregate outputs used by the report are committed under `results/final/`, including the controlled model comparison, review-policy results, lesion-conditioned undergrading, label/lesion consistency audit, XAI summary and parameter-randomisation sanity checks, within-PDR lesion probe, extra-seed sensitivity and test clinical-error summary.
+Small, non-restricted aggregate outputs used by the report are committed under `results/final/`, including the controlled model comparison, paired-bootstrap comparisons, review-policy results, lesion-conditioned undergrading, label/lesion consistency audit, XAI summary and parameter-randomisation sanity checks, within-PDR lesion probe, extra-seed sensitivity and test clinical-error summary. These are post-run evidence exports; they do not alter model selection or permit test-set tuning.
 
 The cleaned notebook is committed with outputs stripped. The **primary experimental code remains pinned to commit `0713e20bb81741163ffea2ee39a5be3dbb870b86`**; subsequent commits add documentation, reproducibility wrappers and small exported results without changing the reported seed-42 model or test predictions.
 
