@@ -208,7 +208,9 @@ The final primary comparison uses one training seed; validation is used for both
 
 ## Final evidence exports
 
-Small, non-restricted aggregate outputs used by the report are committed under `results/final/`, including the controlled model comparison, paired-bootstrap comparisons, review-policy results, lesion-conditioned undergrading, label/lesion consistency audit, XAI summary and parameter-randomisation sanity checks, within-PDR lesion probe, extra-seed sensitivity and test clinical-error summary. These are post-run evidence exports; they do not alter model selection or permit test-set tuning.
+Small, non-restricted aggregate outputs used by the report are committed under `results/final/`, including the controlled model comparison, paired-bootstrap comparisons, review-policy results, lesion-conditioned undergrading, label/lesion consistency audit, XAI summary and parameter-randomisation sanity checks, within-PDR lesion probe, extra-seed sensitivity and test clinical-error summary.
+
+- `test_internal_duplicate_sensitivity.csv`: independent-review metrics for the full 2,225-image official test versus 2,221 images after retaining one per exact pixel hash (four duplicated pairs), showing the largest absolute metric change is under 0.001. The raw prediction/hash recomputation was supplied in the independent review packet; this repository file records its aggregate output. These are post-run evidence exports; they do not alter model selection or permit test-set tuning.
 
 The cleaned notebook is committed with outputs stripped. The **primary experimental code remains pinned to commit `0713e20bb81741163ffea2ee39a5be3dbb870b86`**; subsequent commits add documentation, reproducibility wrappers and small exported results without changing the reported seed-42 model or test predictions.
 
