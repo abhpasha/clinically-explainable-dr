@@ -1,0 +1,14 @@
+# Exact core package versions recorded from the final Kaggle run.
+# This is an environment record, not the portable install file.
+# Use requirements.txt for a fresh installation.
+torch==2.11.0+cu128
+torchvision==0.26.0+cu128
+pandas==2.3.3
+numpy==2.1.3
+Pillow==12.3.0
+scikit-learn==1.6.1
+matplotlib==3.10.0
+PyYAML==6.0.3
+tqdm==4.67.3
+pytest==8.4.2
+scipy==1.16.3
